@@ -1,0 +1,166 @@
+---
+title: "SpatialModeling"
+author: "Margaret Walker"
+date: "March 29, 2016"
+output: pdf_document
+---
+Model Selection for BSB from 2011-2015 with habitat variables. 
+
+```{r}
+data <- read.csv("~/Desktop/DNR_research/Reef_fish/MSdata/SpatialBSB.csv")
+bsb <- subset(data, select=2:23)
+```
+Checking for correlation between variables: 
+```{r}
+plot(Mean.BD.kknn~Mean.SD.kknn, data=bsb) #correlated so only include BD
+```
+
+
+Model Selection: 
+```{r}
+library(MuMIn)
+GLM.Names <- function(x,Names,familyabv) {
+    paste0(familyabv,paste0(Names,x,collapse=""))
+}
+GLM.Formulas <- function(X,Y,offset=NULL,VarType,Names) {
+    tmp <- X
+    for(j in 1:length(tmp)) {
+        if(VarType[j]=="F") {
+            tmp[j] <- ifelse(tmp[j]==0,NA,Names[j])
+            } else {
+                if(VarType[j]=="C") {
+                    tmp[j] <- ifelse(tmp[j]==0,NA,paste0("poly(",Names[j],",",tmp[j],",raw=TRUE)"))
+                    } else {
+                        stop("Invalid value for 'VarType' provided")
+                    }
+            }
+        }
+    if(is.null(offset)==FALSE) {
+        offset <- paste0("+offset(",offset,")")
+        } else {
+            offset <- "+NA"
+            }
+    tmp2 <- paste0(Y,"~",offset,paste(tmp,collapse="+"))
+    tmp3 <- gsub("+NA","",tmp2,fixed=TRUE)
+    gsub("~NA+","~",tmp3,fixed=TRUE)
+}
+model.selection<-function(x,data){
+  tmp<-try(glm(as.formula(x[2]),data=data,family=binomial))
+  w<-ifelse(class(try(AIC(tmp)))=="numeric",AIC(tmp),NA)
+  y<-ifelse(class(try(AICc(tmp)))=="numeric",AICc(tmp),NA)
+  z<-ifelse(class(try(BIC(tmp)))=="numeric",BIC(tmp),NA)
+  disp<-ifelse(class(try(AIC(tmp)))=="numeric",sum(resid(tmp,type="pearson")^2)/tmp$df.resid,NA)
+  c(w,y,z,disp)
+}
+var.names<-c("Year","Lat","Depth","Duration", "Temp","Stenotomus.sp.Abund","Red.Snapper.Abund","Scamp.Abund","Tomtate.Abund", "Mean.BD.kknn", "BH.kknn", "SS.kknn", "SR.kknn")
+variables<-c("Yr","Lat","Depth","Dur","Temp","Steno","RS","Scamp","Tom", "BD", "BH", "SS", "SR")
+comb<-as.matrix(expand.grid(var1=c(0:1),var2=c(0:1),var3=c(0:1), var4=c(0:1),var5=c(0:1),var6=c(0:1),var7=c(0:1),var8=c(0:1),var9=c(0:1), var10=c(0:1),var11=c(0:1), var12=c(0:1), var13=c(0:1)))
+count<-nrow(comb)
+results<-list(name=c(),formula=c())
+system.time(results$name<-apply(comb,1,GLM.Names,Names=variables,familyabv="bin"))
+system.time(results$formula<-apply(comb,1,GLM.Formulas,Y="Presence_absence",Names=var.names,VarType=c("F","C","C","C","C","C","C","C","C", "C", "F", "F", "F")))
+results.frame<-as.data.frame(results)
+results.frame<-results.frame[-1,]
+i<-sapply(results.frame,is.factor)
+results.frame[i]<-lapply(results.frame[i],as.character)
+results.frame$n<-seq(1,length(results.frame[,1]))
+ptm<-proc.time()
+bsb$Year<-as.factor(bsb$Year)
+bin.ic<-t(apply(results.frame,1,FUN=model.selection,data=bsb))
+rownames(bin.ic) <-results.frame[,1]
+colnames(bin.ic) <- c("AIC","AICc","BIC","Dispersion")
+bin.ic.Frame <- as.data.frame(bin.ic)
+bin.ic.Frame$AIC.diff <- bin.ic.Frame$AIC-min(bin.ic.Frame$AIC,na.rm=TRUE)
+bin.ic.Frame$AICc.diff <- bin.ic.Frame$AICc-min(bin.ic.Frame$AICc,na.rm=TRUE)
+bin.ic.Frame$BIC.diff <- bin.ic.Frame$BIC-min(bin.ic.Frame$BIC,na.rm=TRUE)
+bin.ic.BIC <- subset(bin.ic.Frame,BIC.diff<=10)
+bin.ic.BIC <- bin.ic.BIC[with(bin.ic.BIC,order(BIC)),]; bin.ic.BIC
+bin.ic.AIC <- subset(bin.ic.Frame,AIC.diff<=10)
+bin.ic.AIC <- bin.ic.AIC[with(bin.ic.AIC,order(AIC)),]; bin.ic.AIC
+bin.ic.AICc <- subset(bin.ic.Frame,AICc.diff<=5)
+bin.ic.AICc <- bin.ic.AICc[with(bin.ic.AICc,order(AICc)),]; bin.ic.AICc
+proc.time()-ptm
+```
+Best model according to BIC and AIC:
+```{r}
+library(visreg)
+bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+bsbaic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + Scamp.Abund + Mean.BD.kknn + BH.kknn + SS.kknn + SR.kknn, data=bsb, family="binomial" )
+```
+Now for white grunt: 
+```{r}
+dat <- read.csv("~/Desktop/DNR_research/Reef_fish/MSdata/SpatialWG.csv")
+wg <- subset(dat, select=2:21)
+```
+Model selection
+```{r}
+library(MuMIn)
+GLM.Names <- function(x,Names,familyabv) {
+    paste0(familyabv,paste0(Names,x,collapse=""))
+}
+GLM.Formulas <- function(X,Y,offset=NULL,VarType,Names) {
+    tmp <- X
+    for(j in 1:length(tmp)) {
+        if(VarType[j]=="F") {
+            tmp[j] <- ifelse(tmp[j]==0,NA,Names[j])
+            } else {
+                if(VarType[j]=="C") {
+                    tmp[j] <- ifelse(tmp[j]==0,NA,paste0("poly(",Names[j],",",tmp[j],",raw=TRUE)"))
+                    } else {
+                        stop("Invalid value for 'VarType' provided")
+                    }
+            }
+        }
+    if(is.null(offset)==FALSE) {
+        offset <- paste0("+offset(",offset,")")
+        } else {
+            offset <- "+NA"
+            }
+    tmp2 <- paste0(Y,"~",offset,paste(tmp,collapse="+"))
+    tmp3 <- gsub("+NA","",tmp2,fixed=TRUE)
+    gsub("~NA+","~",tmp3,fixed=TRUE)
+}
+model.selection<-function(x,data){
+  tmp<-try(glm(as.formula(x[2]),data=data,family=binomial))
+  w<-ifelse(class(try(AIC(tmp)))=="numeric",AIC(tmp),NA)
+  y<-ifelse(class(try(AICc(tmp)))=="numeric",AICc(tmp),NA)
+  z<-ifelse(class(try(BIC(tmp)))=="numeric",BIC(tmp),NA)
+  disp<-ifelse(class(try(AIC(tmp)))=="numeric",sum(resid(tmp,type="pearson")^2)/tmp$df.resid,NA)
+  c(w,y,z,disp)
+}
+var.names<-c("Year","Lat","Depth","Duration", "Temp","Red.Porgy.Abund","Red.Snapper.Abund", "Mean.BD.kknn", "BH.kknn", "SS.kknn", "SR.kknn")
+variables<-c("Yr","Lat","Depth","Dur","Temp","RP","RS", "BD", "BH", "SS", "SR")
+comb<-as.matrix(expand.grid(var1=c(0:1),var2=c(0:1),var3=c(0:1), var4=c(0:1),var5=c(0:1),var6=c(0:1),var7=c(0:1),var8=c(0:1),var9=c(0:1), var10=c(0:1),var11=c(0:1)))
+count<-nrow(comb)
+results<-list(name=c(),formula=c())
+system.time(results$name<-apply(comb,1,GLM.Names,Names=variables,familyabv="bin"))
+system.time(results$formula<-apply(comb,1,GLM.Formulas,Y="Presence_absence",Names=var.names,VarType=c("F","C","C","C","C","C","C","C","F", "F", "F")))
+results.frame<-as.data.frame(results)
+results.frame<-results.frame[-1,]
+i<-sapply(results.frame,is.factor)
+results.frame[i]<-lapply(results.frame[i],as.character)
+results.frame$n<-seq(1,length(results.frame[,1]))
+ptm<-proc.time()
+wg$Year<-as.factor(wg$Year)
+bin.ic<-t(apply(results.frame,1,FUN=model.selection,data=wg))
+rownames(bin.ic) <-results.frame[,1]
+colnames(bin.ic) <- c("AIC","AICc","BIC","Dispersion")
+bin.ic.Frame <- as.data.frame(bin.ic)
+bin.ic.Frame$AIC.diff <- bin.ic.Frame$AIC-min(bin.ic.Frame$AIC,na.rm=TRUE)
+bin.ic.Frame$AICc.diff <- bin.ic.Frame$AICc-min(bin.ic.Frame$AICc,na.rm=TRUE)
+bin.ic.Frame$BIC.diff <- bin.ic.Frame$BIC-min(bin.ic.Frame$BIC,na.rm=TRUE)
+bin.ic.BIC <- subset(bin.ic.Frame,BIC.diff<=10)
+bin.ic.BIC <- bin.ic.BIC[with(bin.ic.BIC,order(BIC)),]; bin.ic.BIC
+bin.ic.AIC <- subset(bin.ic.Frame,AIC.diff<=10)
+bin.ic.AIC <- bin.ic.AIC[with(bin.ic.AIC,order(AIC)),]; bin.ic.AIC
+bin.ic.AICc <- subset(bin.ic.Frame,AICc.diff<=5)
+bin.ic.AICc <- bin.ic.AICc[with(bin.ic.AICc,order(AICc)),]; bin.ic.AICc
+proc.time()-ptm
+```
+Best aic and bic models
+```{r}
+wgbic <- glm(Presence_absence ~ Year + Lat + Depth + Temp + Red.Porgy.Abund + Mean.BD.kknn, data=wg, family="binomial")
+wgaic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Red.Porgy.Abund + Red.Snapper.Abund + Mean.BD.kknn + SS.kknn + SR.kknn, data=wg, family="binomial" )
+```
+
+
