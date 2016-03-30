@@ -1,0 +1,276 @@
+---
+title: "SpatialDataExploration"
+author: "Margaret Walker"
+date: "March 28, 2016"
+output: pdf_document
+---
+
+Filtering raw chevron trap data into smaller datasets by species and year. 
+Right now, starting with just black sea bass and white grunt.
+Should already be subsetted for valid catch codes and normal sample duration. 
+First, selecting just the columns I will need and saving as csv.
+```{r}
+Raw.Chevron.Trap.Data <- read.csv("~/Desktop/DNR_research/Reef_fish/MSdata/Raw Chevron Trap Data.csv")
+rawchevron <- data.frame(Raw.Chevron.Trap.Data)
+allraw <- subset(rawchevron, select = c(Event, PCG, Year, Lat, Long, Depth, Duration, Temp, Salinity, Black.Sea.Bass.Abund, Red.Porgy.Abund, Red.Snapper.Abund, Scamp.Abund, Stenotomus.sp.Abund, Tomtate.Abund, White.Grunt.Abund ))
+library(xlsx)
+write.csv(allraw, "RawChevron.csv")
+```
+Subsetting for black sea bass. 
+Add presence absence column for black sea bass.
+Make a csv for just 2011-2015.
+```{r}
+allbsb <- subset(allraw, select =c(Event, PCG, Year, Lat, Long, Depth, Duration, Temp, Salinity, Black.Sea.Bass.Abund, Red.Snapper.Abund, Scamp.Abund, Stenotomus.sp.Abund, Tomtate.Abund))
+allbsb$Presence_absence <- ifelse(allbsb$Black.Sea.Bass.Abund!=0, 1,0)
+write.csv(allbsb, "rawBSB.csv")
+newbsb <- subset(allbsb, Year >= 2011) 
+newbsb <- na.exclude(newbsb)
+write.csv(newbsb, "newBSB.csv")
+```
+Subsetting for white grunt. 
+Make a csv for just 2011-2015. 
+```{r}
+allwg <- subset(allraw, select =c(Event, PCG, Year, Lat, Long, Depth, Duration, Temp, Salinity, Red.Porgy.Abund, Red.Snapper.Abund, White.Grunt.Abund))
+allwg$Presence_absence <- ifelse(allwg$White.Grunt.Abund!=0, 1, 0)
+write.csv(allwg, "rawWG.csv")
+newwg <- subset(allwg, Year >= 2011)
+write.csv(newwg, "newWG.csv")
+newwg <- na.exclude(newwg)
+```
+Using Joey's spatial smoothing code to get habitat data for all of my samples. 
+First for BSB.
+```{r}
+set.seed(1234)
+library(RColorBrewer)
+library(maptools)
+library(gridBase)
+library(grid)
+library(rgdal)
+library(fields)
+```
+First, bring in video data and use kknn on that.  Then predict values for my data set. 
+```{r}
+Video.Data <- read.csv("~/Desktop/DNR_research/Reef_fish/MSdata/Video Data.csv")
+Video.Data <- Video.Data[,-1]
+
+Habitat.Data <- subset(Video.Data,Valid_Video=="Yes")
+#Habitat.Data <- subset(Habitat.Data,Station_Code!="Recon")
+Habitat.Data <- Habitat.Data[,c(2,12,13,72:78)]
+
+library(plyr)
+Habitat.Data$Biota_Height <- ordered(Habitat.Data$Biota_Height,
+                                     levels=c("Unknown",
+                                              "No attached biota",
+                                              "Max height < 0.5 m",
+                                              "Max Height >0.5 m"))
+Habitat.Data$Biota_Height <- with(Habitat.Data,revalue(Biota_Height,c("Unknown"=NA)))
+Habitat.Data$Substrate_Size <- ordered(Habitat.Data$Substrate_Size,
+                                       levels=c("Substrate cannot be seen",
+                                                "No consolidated sediment",
+                                                "> 50% consolidated sediment <1 m in diameter",
+                                                ">50% Consolidated Sediment > 1 m in diameter"))
+Habitat.Data$Substrate_Size <- with(Habitat.Data,revalue(Substrate_Size,
+                                                         c("Substrate cannot 
+                                                           be seen"=NA)))
+Habitat.Data$Substrate_Relief <- ordered(Habitat.Data$Substrate_Relief,
+                                         levels=c("Relief cannot be seen",
+                                                  "<0.3 m of Relief",
+                                                  "0.3 - 1 m of Relief",
+                                                  ">1 m of Relief"))
+Habitat.Data$Substrate_Relief <- with(Habitat.Data,revalue(Substrate_Relief,
+                                                           c("Relief cannot
+                                                             be seen"=NA)))
+Habitat.Data <- droplevels(Habitat.Data)
+BD.data <- na.exclude(Habitat.Data[,c("Latitude","Longitude", "Max_Biota_Density", "Mean_Biota_Density")])
+SD.data <- na.exclude(Habitat.Data[,c("Latitude", "Longitude", "Max_Substrate_Density", "Mean_Substrate_Density")])
+BH.data <- na.exclude(Habitat.Data[,c("Latitude", "Longitude", "Biota_Height")])
+SS.data <- na.exclude(Habitat.Data[,c("Latitude", "Longitude", "Substrate_Size")])
+SR.data <- na.exclude(Habitat.Data[,c("Latitude", "Longitude", "Substrate_Relief")])
+```
+Functions from Joey's script:
+```{r}
+# Function to test if the minimum distance between a point is > 1km from all points in another vector
+dist.calc.function <- function(X,data,dist=1) {
+    ifelse(min(rdist.earth(data.frame(Longitude=X[1],
+                                      Latitude=X[2]),
+                           data[,c("Longitude","Latitude")]))>dist,
+           FALSE,
+           TRUE)
+}
+
+# A useful function
+  dircos<- function(x1){
+             coslat1 <- cos((x1[, 2] * pi)/180)
+             sinlat1 <- sin((x1[, 2] * pi)/180)
+             coslon1 <- cos((x1[, 1] * pi)/180)
+             sinlon1 <- sin((x1[, 1] * pi)/180)
+             cbind(coslon1*coslat1, sinlon1*coslat1, sinlat1)}
+colfunc <- colorRampPalette(c("royalblue","springgreen","red"))
+
+kknn.fitted.values <- function(data) {
+    subset(do.call("rbind",
+                   lapply(data$fitted.values,
+                          function(X) {
+                              data.frame(value=X,
+                                         type=attr(X,"kernel"),
+                                         k=attr(X,"k"))
+                              })),
+           type==data$best.parameters$kernel&k==data$best.parameters$k)
+}
+
+```
+Coast data
+```{r}
+mp.usa <- map('usa',plot=FALSE,fill=TRUE,col="gray")
+data(us.cities)
+```
+Creating a grid that can be used for prediction using our spatial models later in the script
+```{r}
+xg <- make.surface.grid(fields.x.to.grid(Habitat.Data[,c("Longitude","Latitude")],
+                                         nx=200,ny=200))
+test <- sapply(lapply(1:nrow(xg), function(i) xg[i,]),dist.calc.function,data=Habitat.Data,dist=1.5) 
+# Test whether individual grid points are closer than specified distance (in km) from a data point.
+# Subsetting the grid to only include those grid values that are whithin a certain distance of an observed data point
+xg <- data.frame(xg)
+xg$test <- test
+xg <- subset(xg,test==TRUE)
+xg <- xg[,-3]
+```
+
+# Weighted k-Nearest Neighbors Models
+## Maximum Biota Density
+### No Covariates
+first for BSB then WG
+```{r}
+library(kknn)
+test <- data.frame(dircos(BD.data[,c("Longitude", "Latitude")]))
+test$Max_Biota_Density <- BD.data$Max_Biota_Density
+Max.BD.kknn.NoCov <- train.kknn(Max_Biota_Density~sinlat1,
+                         test,
+                         kmax=40,
+                         distance=2,
+                         kernel=c("triangular",
+                                  "epanechnikov",
+                                  "biweight",
+                                  "triweight",
+                                  "optimal")); Max.BD.kknn.NoCov
+predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
+newbsb$Max.BD.kknn <- predict(Max.BD.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+predict.df2 <- data.frame(dircos(newwg[,c("Long", "Lat")]))
+newwg$Max.BD.kknn <-predict(Max.BD.kknn.NoCov, newdata = list(sinlat1 =predict.df2$sinlat1))
+```
+Mean biota density
+```{r}
+test <- data.frame(dircos(BD.data[,c("Longitude", "Latitude")]))
+test$Mean_Biota_Density <- BD.data$Mean_Biota_Density
+Mean.BD.kknn.NoCov <- train.kknn(Mean_Biota_Density~sinlat1,
+                         test,
+                         kmax=40,
+                         distance=2,
+                         kernel=c("triangular",
+                                  "epanechnikov",
+                                  "biweight",
+                                  "triweight",
+                                  "optimal")); Mean.BD.kknn.NoCov
+predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
+newbsb$Mean.BD.kknn <- predict(Mean.BD.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+predict.df2 <- data.frame(dircos(newwg[,c("Long","Lat")]))
+newwg$Mean.BD.kknn <- predict(Mean.BD.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1))
+```
+Biota Height
+```{r}
+test <- data.frame(dircos(BH.data[,c("Longitude", "Latitude")]))
+test$Biota_Height <- BH.data$Biota_Height
+BH.kknn.NoCov <- train.kknn(Biota_Height~sinlat1,
+                         test,
+                         kmax=40,
+                         distance=2,
+                         kernel=c("triangular",
+                                  "epanechnikov",
+                                  "biweight",
+                                  "triweight",
+                                  "optimal")); BH.kknn.NoCov
+predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
+newbsb$BH.kknn <- predict(BH.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+predict.df2 <- data.frame(dircos(newwg[,c("Long","Lat")]))
+newwg$BH.kknn <- predict(BH.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1))
+```
+Max Substrate Density
+```{r}
+test <- data.frame(dircos(SD.data[,c("Longitude", "Latitude")]))
+test$Max_Substrate_Density <- SD.data$Max_Substrate_Density
+Max.SD.kknn.NoCov <- train.kknn(Max_Substrate_Density~sinlat1,
+                         test,
+                         kmax=40,
+                         distance=2,
+                         kernel=c("triangular",
+                                  "epanechnikov",
+                                  "biweight",
+                                  "triweight",
+                                  "optimal")); Max.SD.kknn.NoCov
+predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
+newbsb$Max.SD.kknn <- predict(Max.SD.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+predict.df2 <- data.frame(dircos(newwg[,c("Long","Lat")]))
+newwg$Max.SD.kknn <- predict(Max.SD.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1))
+```
+Mean Substrate Density
+```{r}
+test <- data.frame(dircos(SD.data[,c("Longitude", "Latitude")]))
+test$Mean_Substrate_Density <- SD.data$Mean_Substrate_Density
+Mean.SD.kknn.NoCov <- train.kknn(Mean_Substrate_Density~sinlat1,
+                         test,
+                         kmax=40,
+                         distance=2,
+                         kernel=c("triangular",
+                                  "epanechnikov",
+                                  "biweight",
+                                  "triweight",
+                                  "optimal")); Mean.SD.kknn.NoCov
+predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
+newbsb$Mean.SD.kknn <- predict(Mean.SD.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+predict.df2 <- data.frame(dircos(newwg[,c("Long","Lat")]))
+newwg$Mean.SD.kknn <- predict(Mean.SD.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1))
+```
+Substrate Size
+```{r}
+test <- data.frame(dircos(SS.data[,c("Longitude", "Latitude")]))
+test$Substrate_Size <- SS.data$Substrate_Size
+SS.kknn.NoCov <- train.kknn(Substrate_Size~sinlat1,
+                         test,
+                         kmax=40,
+                         distance=2,
+                         kernel=c("triangular",
+                                  "epanechnikov",
+                                  "biweight",
+                                  "triweight",
+                                  "optimal")); SS.kknn.NoCov
+predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
+newbsb$SS.kknn <- predict(SS.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+predict.df2 <- data.frame(dircos(newwg[,c("Long","Lat")]))
+newwg$SS.kknn <- predict(SS.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1))
+```
+Substrate Relief
+```{r}
+test <- data.frame(dircos(SR.data[,c("Longitude", "Latitude")]))
+test$Substrate_Relief <- SR.data$Substrate_Relief
+SR.kknn.NoCov <- train.kknn(Substrate_Relief~sinlat1,
+                         test,
+                         kmax=40,
+                         distance=2,
+                         kernel=c("triangular",
+                                  "epanechnikov",
+                                  "biweight",
+                                  "triweight",
+                                  "optimal")); SR.kknn.NoCov
+predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
+newbsb$SR.kknn <- predict(SR.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+predict.df2 <- data.frame(dircos(newwg[,c("Long","Lat")]))
+newwg$SR.kknn <- predict(SR.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1))
+```
+Creating new csv for bsb and wg with habiat variables. 
+
+```{r}
+write.csv(newbsb, "SpatialBSB.csv")
+write.csv(newwg, "SpatialWG.csv")
+```
+
