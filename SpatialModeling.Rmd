@@ -85,6 +85,7 @@ Best model according to BIC and AIC:
 ```{r}
 library(visreg)
 bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+visreg(bsbbic,type="conditional", scale="response", ylab="Probability of Occurrence")
 bsbaic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + Scamp.Abund + Mean.BD.kknn + BH.kknn + SS.kknn + SR.kknn, data=bsb, family="binomial" )
 ```
 Now for white grunt: 
@@ -160,6 +161,7 @@ proc.time()-ptm
 Best aic and bic models
 ```{r}
 wgbic <- glm(Presence_absence ~ Year + Lat + Depth + Temp + Red.Porgy.Abund + Mean.BD.kknn, data=wg, family="binomial")
+visreg(wgbic,type="conditional", scale="response", ylab="Probability of Occurrence")
 wgaic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Red.Porgy.Abund + Red.Snapper.Abund + Mean.BD.kknn + SS.kknn + SR.kknn, data=wg, family="binomial" )
 ```
 
