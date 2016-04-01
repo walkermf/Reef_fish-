@@ -1,0 +1,36 @@
+---
+title: "SLOO_BSB"
+author: "Margaret Walker"
+date: "March 30, 2016"
+output: pdf_document
+---
+```{r}
+library(geoR)
+library(fields)
+```
+
+SLOO for BSB
+```{r}
+data <- read.csv("~/Desktop/DNR_research/Reef_fish/MSdata/SpatialBSB.csv")
+bsb <- subset(data, select=2:23)
+```
+Best model based on BIC from model selection 
+```{r}
+bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+summary(bsbbic)
+```
+Determining split distance 
+```{r}
+indices = sample(nrow(dat_sub), nrow(dat_sub) / 5)
+dat_sub = data.frame(Lat =bsb$Lat, Long=bsb$Long, 
+                     resid = residuals(bsbbic, 'response'))
+dat_sub = dat_sub[indices, ]
+
+xydist <- dist(dat_sub[ , c('Long', 'Lat')])
+d_resid = dist(dat_sub$resid)
+
+plot(d_resid ~ xydist, type='n')
+lines(lowess(xydist, d_resid), lwd=2, col='red')
+
+```
+appears there is no real spatial autocorrelation at the trap scale.  Will go forward with tradiation cross validation.  
