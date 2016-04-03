@@ -1,0 +1,148 @@
+---
+title: "CrossValidation"
+author: "Margaret Walker"
+date: "April 3, 2016"
+output: pdf_document
+---
+k fold cross validation for bsb
+```{r}
+#data and best model
+data <- read.csv("~/Desktop/DNR_research/Reef_fish/MSdata/SpatialBSB.csv")
+bsb <- subset(data, select=2:23)
+bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+
+library(plyr)
+library(caret)
+#false positive rate 
+fpr <- NULL
+#false negative rate
+fnr <- NULL
+#number of iterations
+k <- 100
+#initialize progress bar
+pbar <- create_progress_bar("text")
+pbar$init(k)
+#accuracy
+acc <- NULL
+set.seed(123)
+
+
+for(i in 1:k)
+{
+# Train-test splitting
+# 75% of samples -> fitting
+# 25% of samples -> testing
+smp_size <- floor(0.75 * nrow(bsb))
+index <- sample(seq_len(nrow(bsb)),size=smp_size)
+train <- bsb[index, ]
+test <- bsb[-index, ]
+# Fitting
+bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=train, family="binomial")
+# Predict results
+results_prob <- predict(bsbbic,subset(test,select=c(3:22)),type='response')
+# If prob > 0.5 then 1, else 0
+results <- ifelse(results_prob > 0.5,1,0)
+# Actual answers
+answers <- test$Presence_absence
+# Accuracy calculation
+misClasificError <- mean(answers != results)
+# Collecting results
+acc[i] <- 1-misClasificError
+# Confusion matrix
+cm <- confusionMatrix(data=results, reference=answers)
+fpr[i] <- cm$table[2]/(nrow(bsb)-smp_size)
+fnr[i] <- cm$table[3]/(nrow(bsb)-smp_size)
+pbar$step()
+}
+
+# Average accuracy of the model
+mean(acc)
+par(mfcol=c(1,2))
+# Histogram of accuracy
+hist(acc,xlab='Accuracy',ylab='Freq',
+col='cyan',border='blue',density=30)
+
+# Boxplot of accuracy
+boxplot(acc,col='cyan',border='blue',horizontal=T,xlab='Accuracy',
+main='Accuracy CV')
+
+# Confusion matrix and plots of fpr and fnr
+mean(fpr)
+mean(fnr)
+hist(fpr,xlab='% of fnr',ylab='Freq',main='FPR',
+col='cyan',border='blue',density=30)
+hist(fnr,xlab='% of fnr',ylab='Freq',main='FNR',
+col='cyan',border='blue',density=30)
+
+
+
+```
+Now for white grunt
+
+```{r}
+dat <- read.csv("~/Desktop/DNR_research/Reef_fish/MSdata/SpatialWG.csv")
+wg <- subset(dat, select=2:21)
+wgbic <- glm(Presence_absence ~ Year + Lat + Depth + Temp + Red.Porgy.Abund + Mean.BD.kknn, data=wg, family="binomial")
+
+#false positive rate 
+fpr <- NULL
+#false negative rate
+fnr <- NULL
+#number of iterations
+k <- 100
+#initialize progress bar
+pbar <- create_progress_bar("text")
+pbar$init(k)
+#accuracy
+acc <- NULL
+set.seed(123)
+
+
+for(i in 1:k)
+{
+# Train-test splitting
+# 75% of samples -> fitting
+# 25% of samples -> testing
+smp_size <- floor(0.75 * nrow(wg))
+index <- sample(seq_len(nrow(wg)),size=smp_size)
+train <- wg[index, ]
+test <- wg[-index, ]
+# Fitting
+wgbic <- glm(Presence_absence ~ Year + Lat + Depth + Temp + Red.Porgy.Abund + Mean.BD.kknn, data=train, family="binomial")
+# Predict results
+results_prob <- predict(wgbic,subset(test,select=c(3:20)),type='response')
+# If prob > 0.5 then 1, else 0
+results <- ifelse(results_prob > 0.5,1,0)
+# Actual answers
+answers <- test$Presence_absence
+# Accuracy calculation
+misClasificError <- mean(answers != results)
+# Collecting results
+acc[i] <- 1-misClasificError
+# Confusion matrix
+cm <- confusionMatrix(data=results, reference=answers)
+fpr[i] <- cm$table[2]/(nrow(wg)-smp_size)
+fnr[i] <- cm$table[3]/(nrow(wg)-smp_size)
+pbar$step()
+}
+
+# Average accuracy of the model
+mean(acc)
+par(mfcol=c(1,2))
+# Histogram of accuracy
+hist(acc,xlab='Accuracy',ylab='Freq',
+col='cyan',border='blue',density=30)
+
+# Boxplot of accuracy
+boxplot(acc,col='cyan',border='blue',horizontal=T,xlab='Accuracy',
+main='Accuracy CV')
+
+# Confusion matrix and plots of fpr and fnr
+mean(fpr)
+mean(fnr)
+hist(fpr,xlab='% of fnr',ylab='Freq',main='FPR',
+col='cyan',border='blue',density=30)
+hist(fnr,xlab='% of fnr',ylab='Freq',main='FNR',
+col='cyan',border='blue',density=30)
+```
+
