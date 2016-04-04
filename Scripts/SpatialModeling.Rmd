@@ -7,7 +7,7 @@ output: pdf_document
 Model Selection for BSB from 2011-2015 with habitat variables. 
 
 ```{r}
-data <- read.csv("~/Desktop/DNR_research/Reef_fish/Data/SpatialBSB.csv")
+data <- read.csv("./Data/SpatialBSB.csv")
 bsb <- subset(data, select=2:23)
 ```
 Checking for correlation between variables: 
@@ -90,7 +90,7 @@ bsbaic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotom
 ```
 Now for white grunt: 
 ```{r}
-dat <- read.csv("~/Desktop/DNR_research/Reef_fish/Data/SpatialWG.csv")
+dat <- read.csv("./Data/SpatialWG.csv")
 wg <- subset(dat, select=2:21)
 ```
 Model selection

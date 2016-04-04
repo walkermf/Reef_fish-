@@ -7,7 +7,7 @@ output: pdf_document
 k fold cross validation for bsb
 ```{r}
 #data and best model
-data <- read.csv("~/Desktop/DNR_research/Reef_fish/Data/SpatialBSB.csv")
+data <- read.csv("./Data/SpatialBSB.csv")
 bsb <- subset(data, select=2:23)
 bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
 
@@ -80,7 +80,7 @@ col='cyan',border='blue',density=30)
 Now for white grunt
 
 ```{r}
-dat <- read.csv("~/Desktop/DNR_research/Reef_fish/Data/SpatialWG.csv")
+dat <- read.csv("./Data/SpatialWG.csv")
 wg <- subset(dat, select=2:21)
 wgbic <- glm(Presence_absence ~ Year + Lat + Depth + Temp + Red.Porgy.Abund + Mean.BD.kknn, data=wg, family="binomial")
 
