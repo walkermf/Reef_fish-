@@ -10,7 +10,7 @@ Right now, starting with just black sea bass and white grunt.
 Should already be subsetted for valid catch codes and normal sample duration. 
 First, selecting just the columns I will need and saving as csv.
 ```{r}
-Raw.Chevron.Trap.Data <- read.csv("~/Desktop/DNR_research/Reef_fish/MSdata/Raw Chevron Trap Data.csv")
+Raw.Chevron.Trap.Data <- read.csv("~/Desktop/DNR_research/Reef_fish/Data/Raw Chevron Trap Data.csv")
 rawchevron <- data.frame(Raw.Chevron.Trap.Data)
 allraw <- subset(rawchevron, select = c(Event, PCG, Year, Lat, Long, Depth, Duration, Temp, Salinity, Black.Sea.Bass.Abund, Red.Porgy.Abund, Red.Snapper.Abund, Scamp.Abund, Stenotomus.sp.Abund, Tomtate.Abund, White.Grunt.Abund ))
 library(xlsx)
@@ -50,7 +50,7 @@ library(fields)
 ```
 First, bring in video data and use kknn on that.  Then predict values for my data set. 
 ```{r}
-Video.Data <- read.csv("~/Desktop/DNR_research/Reef_fish/MSdata/Video Data.csv")
+Video.Data <- read.csv("~/Desktop/DNR_research/Reef_fish/Data/Video Data.csv")
 Video.Data <- Video.Data[,-1]
 
 Habitat.Data <- subset(Video.Data,Valid_Video=="Yes")
