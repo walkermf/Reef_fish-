@@ -18,7 +18,7 @@ fpr <- NULL
 #false negative rate
 fnr <- NULL
 #number of iterations
-k <- 100
+k <- 500
 #initialize progress bar
 pbar <- create_progress_bar("text")
 pbar$init(k)
@@ -30,9 +30,9 @@ set.seed(123)
 for(i in 1:k)
 {
 # Train-test splitting
-# 75% of samples -> fitting
-# 25% of samples -> testing
-smp_size <- floor(0.75 * nrow(bsb))
+# 95% of samples -> fitting
+# 5% of samples -> testing
+smp_size <- floor(0.95 * nrow(bsb))
 index <- sample(seq_len(nrow(bsb)),size=smp_size)
 train <- bsb[index, ]
 test <- bsb[-index, ]
@@ -89,7 +89,7 @@ fpr <- NULL
 #false negative rate
 fnr <- NULL
 #number of iterations
-k <- 100
+k <- 500
 #initialize progress bar
 pbar <- create_progress_bar("text")
 pbar$init(k)
@@ -101,9 +101,9 @@ set.seed(123)
 for(i in 1:k)
 {
 # Train-test splitting
-# 75% of samples -> fitting
-# 25% of samples -> testing
-smp_size <- floor(0.75 * nrow(wg))
+# 95% of samples -> fitting
+# 5% of samples -> testing
+smp_size <- floor(0.95 * nrow(wg))
 index <- sample(seq_len(nrow(wg)),size=smp_size)
 train <- wg[index, ]
 test <- wg[-index, ]
