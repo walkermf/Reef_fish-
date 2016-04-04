@@ -11,7 +11,7 @@ library(fields)
 
 SLOO for BSB
 ```{r}
-data <- read.csv("~/Desktop/DNR_research/Reef_fish/MSdata/SpatialBSB.csv")
+data <- read.csv(".Data/SpatialBSB.csv")
 bsb <- subset(data, select=2:23)
 ```
 Best model based on BIC from model selection 

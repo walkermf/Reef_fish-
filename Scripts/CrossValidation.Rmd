@@ -24,36 +24,38 @@ pbar <- create_progress_bar("text")
 pbar$init(k)
 #accuracy
 acc <- NULL
-set.seed(123)
+#set.seed(123)
 
 
-for(i in 1:k)
-{
-# Train-test splitting
-# 95% of samples -> fitting
-# 5% of samples -> testing
-smp_size <- floor(0.95 * nrow(bsb))
-index <- sample(seq_len(nrow(bsb)),size=smp_size)
-train <- bsb[index, ]
-test <- bsb[-index, ]
-# Fitting
-bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=train, family="binomial")
-# Predict results
-results_prob <- predict(bsbbic,subset(test,select=c(3:22)),type='response')
-# If prob > 0.5 then 1, else 0
-results <- ifelse(results_prob > 0.5,1,0)
-# Actual answers
-answers <- test$Presence_absence
-# Accuracy calculation
-misClasificError <- mean(answers != results)
-# Collecting results
-acc[i] <- 1-misClasificError
-# Confusion matrix
-cm <- confusionMatrix(data=results, reference=answers)
-fpr[i] <- cm$table[2]/(nrow(bsb)-smp_size)
-fnr[i] <- cm$table[3]/(nrow(bsb)-smp_size)
-pbar$step()
+for(i in 1:k) {
+  # Train-test splitting
+  # 95% of samples -> fitting
+  # 5% of samples -> testing
+  smp_size <- floor(0.95 * nrow(bsb))
+  index <- sample(seq_len(nrow(bsb)), size=smp_size)
+  train <- bsb[index, ]
+  test <- bsb[-index, ]
+  # Fitting
+  bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + 
+                  Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn,
+                data=train, family="binomial")
+  # Predict results
+  results_prob <- predict(bsbbic,subset(test,select=c(3:22)), type='response')
+  # If prob > 0.5 then 1, else 0
+  results <- ifelse(results_prob > 0.5, 1, 0)
+  # Actual answers
+  answers <- test$Presence_absence
+  # Accuracy calculation
+  misClasificError <- mean(answers != results)
+  # Collecting results
+  acc[i] <- 1 - misClasificError
+  # Confusion matrix
+  cm <- confusionMatrix(data=results, reference=answers)
+  fpr[i] <- cm$table[2] / (nrow(bsb) - smp_size)
+  fnr[i] <- cm$table[3] / (nrow(bsb) - smp_size)
+  pbar$step()
 }
+
 
 # Average accuracy of the model
 mean(acc)
