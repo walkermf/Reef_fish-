@@ -4,9 +4,11 @@ author: "Margaret Walker"
 date: "March 28, 2016"
 output: pdf_document
 ---
+#Data exploration and manipuation for thesis data
+This markdown contains data manipulation from raw chevron trap data to data to be used in model selection for black sea bass and white grunt. 
 
-Filtering raw chevron trap data into smaller datasets by species and year. 
-Right now, starting with just black sea bass and white grunt.
+1.
+Filtering raw chevron trap data into smaller datasets. 
 Should already be subsetted for valid catch codes and normal sample duration. 
 First, selecting just the columns I will need and saving as csv.
 ```{r}
@@ -28,6 +30,7 @@ newbsb <- na.exclude(newbsb)
 write.csv(newbsb, "newBSB.csv")
 ```
 Subsetting for white grunt. 
+Add presence absence column for white grunt
 Make a csv for just 2011-2015. 
 ```{r}
 allwg <- subset(allraw, select =c(Event, PCG, Year, Lat, Long, Depth, Duration, Temp, Salinity, Red.Porgy.Abund, Red.Snapper.Abund, White.Grunt.Abund))
@@ -48,7 +51,7 @@ library(grid)
 library(rgdal)
 library(fields)
 ```
-First, bring in video data and use kknn on that.  Then predict values for my data set. 
+First, bring in video data and use weighted k nearest neighbor approach to extrapolate habitat value based on lat, long for my data.  
 ```{r}
 Video.Data <- read.csv("./Data/Video Data.csv")
 Video.Data <- Video.Data[,-1]
@@ -119,11 +122,7 @@ kknn.fitted.values <- function(data) {
 }
 
 ```
-Coast data
-```{r}
-mp.usa <- map('usa',plot=FALSE,fill=TRUE,col="gray")
-data(us.cities)
-```
+
 Creating a grid that can be used for prediction using our spatial models later in the script
 ```{r}
 xg <- make.surface.grid(fields.x.to.grid(Habitat.Data[,c("Longitude","Latitude")],
@@ -140,7 +139,7 @@ xg <- xg[,-3]
 # Weighted k-Nearest Neighbors Models
 ## Maximum Biota Density
 ### No Covariates
-first for BSB then WG
+first for BSB then WG. Creating maximum biota density column for white grunt and black sea bass data sets.
 ```{r}
 library(kknn)
 test <- data.frame(dircos(BD.data[,c("Longitude", "Latitude")]))
@@ -155,11 +154,13 @@ Max.BD.kknn.NoCov <- train.kknn(Max_Biota_Density~sinlat1,
                                   "triweight",
                                   "optimal")); Max.BD.kknn.NoCov
 predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
-newbsb$Max.BD.kknn <- predict(Max.BD.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+newbsb$Max.BD.kknn <- predict(Max.BD.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))  #black sea bass
 predict.df2 <- data.frame(dircos(newwg[,c("Long", "Lat")]))
-newwg$Max.BD.kknn <-predict(Max.BD.kknn.NoCov, newdata = list(sinlat1 =predict.df2$sinlat1))
+newwg$Max.BD.kknn <-predict(Max.BD.kknn.NoCov, newdata = list(sinlat1 =predict.df2$sinlat1))  #white grunt
 ```
 Mean biota density
+First for black sea bass then white grunt.
+Creating mean biota desnity column for white grunt and black sea bass datasets. 
 ```{r}
 test <- data.frame(dircos(BD.data[,c("Longitude", "Latitude")]))
 test$Mean_Biota_Density <- BD.data$Mean_Biota_Density
@@ -173,11 +174,13 @@ Mean.BD.kknn.NoCov <- train.kknn(Mean_Biota_Density~sinlat1,
                                   "triweight",
                                   "optimal")); Mean.BD.kknn.NoCov
 predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
-newbsb$Mean.BD.kknn <- predict(Mean.BD.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+newbsb$Mean.BD.kknn <- predict(Mean.BD.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))  #black sea bass
 predict.df2 <- data.frame(dircos(newwg[,c("Long","Lat")]))
-newwg$Mean.BD.kknn <- predict(Mean.BD.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1))
+newwg$Mean.BD.kknn <- predict(Mean.BD.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1)) #white grunt
 ```
 Biota Height
+First for black sea bass then white grunt
+Creating biota height column for black sea bass and white grunt datasets.
 ```{r}
 test <- data.frame(dircos(BH.data[,c("Longitude", "Latitude")]))
 test$Biota_Height <- BH.data$Biota_Height
@@ -191,11 +194,12 @@ BH.kknn.NoCov <- train.kknn(Biota_Height~sinlat1,
                                   "triweight",
                                   "optimal")); BH.kknn.NoCov
 predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
-newbsb$BH.kknn <- predict(BH.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+newbsb$BH.kknn <- predict(BH.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1)) #black sea bass
 predict.df2 <- data.frame(dircos(newwg[,c("Long","Lat")]))
-newwg$BH.kknn <- predict(BH.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1))
+newwg$BH.kknn <- predict(BH.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1)) #white grunt
 ```
-Max Substrate Density
+Maximum Substrate Density
+Creating maximum substrate density column for black sea bass and white grunt data sets. 
 ```{r}
 test <- data.frame(dircos(SD.data[,c("Longitude", "Latitude")]))
 test$Max_Substrate_Density <- SD.data$Max_Substrate_Density
@@ -209,11 +213,13 @@ Max.SD.kknn.NoCov <- train.kknn(Max_Substrate_Density~sinlat1,
                                   "triweight",
                                   "optimal")); Max.SD.kknn.NoCov
 predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
-newbsb$Max.SD.kknn <- predict(Max.SD.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+newbsb$Max.SD.kknn <- predict(Max.SD.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1)) #black sea bass
 predict.df2 <- data.frame(dircos(newwg[,c("Long","Lat")]))
-newwg$Max.SD.kknn <- predict(Max.SD.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1))
+newwg$Max.SD.kknn <- predict(Max.SD.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1)) #white grunt
 ```
 Mean Substrate Density
+Creating mean substrate density columns for black sea bass and white grunt datasets. 
+
 ```{r}
 test <- data.frame(dircos(SD.data[,c("Longitude", "Latitude")]))
 test$Mean_Substrate_Density <- SD.data$Mean_Substrate_Density
@@ -227,11 +233,12 @@ Mean.SD.kknn.NoCov <- train.kknn(Mean_Substrate_Density~sinlat1,
                                   "triweight",
                                   "optimal")); Mean.SD.kknn.NoCov
 predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
-newbsb$Mean.SD.kknn <- predict(Mean.SD.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+newbsb$Mean.SD.kknn <- predict(Mean.SD.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1)) #black sea bass
 predict.df2 <- data.frame(dircos(newwg[,c("Long","Lat")]))
-newwg$Mean.SD.kknn <- predict(Mean.SD.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1))
+newwg$Mean.SD.kknn <- predict(Mean.SD.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1)) #white grunt
 ```
 Substrate Size
+Creating substrate size column for black sea bass and white grunt data sets. 
 ```{r}
 test <- data.frame(dircos(SS.data[,c("Longitude", "Latitude")]))
 test$Substrate_Size <- SS.data$Substrate_Size
@@ -245,11 +252,12 @@ SS.kknn.NoCov <- train.kknn(Substrate_Size~sinlat1,
                                   "triweight",
                                   "optimal")); SS.kknn.NoCov
 predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
-newbsb$SS.kknn <- predict(SS.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+newbsb$SS.kknn <- predict(SS.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1)) #black sea bass
 predict.df2 <- data.frame(dircos(newwg[,c("Long","Lat")]))
-newwg$SS.kknn <- predict(SS.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1))
+newwg$SS.kknn <- predict(SS.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1)) #white grunt
 ```
 Substrate Relief
+Creating substrate relief column for black sea bass and white grunt data sets.
 ```{r}
 test <- data.frame(dircos(SR.data[,c("Longitude", "Latitude")]))
 test$Substrate_Relief <- SR.data$Substrate_Relief
@@ -263,9 +271,9 @@ SR.kknn.NoCov <- train.kknn(Substrate_Relief~sinlat1,
                                   "triweight",
                                   "optimal")); SR.kknn.NoCov
 predict.df <- data.frame(dircos(newbsb[,c("Long","Lat")]))
-newbsb$SR.kknn <- predict(SR.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1))
+newbsb$SR.kknn <- predict(SR.kknn.NoCov, newdata = list(sinlat1 = predict.df$sinlat1)) #black sea bass
 predict.df2 <- data.frame(dircos(newwg[,c("Long","Lat")]))
-newwg$SR.kknn <- predict(SR.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1))
+newwg$SR.kknn <- predict(SR.kknn.NoCov, newdata = list(sinlat1 = predict.df2$sinlat1)) #white grunt
 ```
 Creating new csv for bsb and wg with habiat variables. 
 

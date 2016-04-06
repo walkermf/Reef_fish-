@@ -4,19 +4,23 @@ author: "Margaret Walker"
 date: "March 29, 2016"
 output: pdf_document
 ---
-Model Selection for BSB from 2011-2015 with habitat variables. 
+#Model Selection 
 
+Bring in black sea bass data set and select just the necessary columns. 
 ```{r}
 data <- read.csv("./Data/SpatialBSB.csv")
 bsb <- subset(data, select=2:23)
 ```
 Checking for correlation between variables: 
 ```{r}
-plot(Mean.BD.kknn~Mean.SD.kknn, data=bsb) #correlated so only include BD
+plot(Mean.BD.kknn~Mean.SD.kknn, data=bsb) #correlated so only include biota density not both 
 ```
+Also only include Mean.BD.kknn not Max.BD.kknn because that is the average value for each trap. 
 
-
-Model Selection: 
+Automated model selection process is below:
+First we will run this on black sea bass for 2011-2015. 
+The potential variables to be included in the model are as follows:
+Year, Latitude, Depth, Duration, Temperature, Stenotomus sp. abundance, Red Snapper Abundance, Scamp abundance, Tomtate abundance, mean biota density, biota height, substrate size, and substrate relief. 
 ```{r}
 library(MuMIn)
 GLM.Names <- function(x,Names,familyabv) {
@@ -82,18 +86,24 @@ bin.ic.AICc <- bin.ic.AICc[with(bin.ic.AICc,order(AICc)),]; bin.ic.AICc
 proc.time()-ptm
 ```
 Best model according to BIC and AIC:
+Plots created to look at the effects of the individual variables on probability of occurence using visreg. 
+BIC model contains 9 variables while the AIC model contains 13 variables. 
 ```{r}
 library(visreg)
 bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
 visreg(bsbbic,type="conditional", scale="response", ylab="Probability of Occurrence")
 bsbaic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + Scamp.Abund + Mean.BD.kknn + BH.kknn + SS.kknn + SR.kknn, data=bsb, family="binomial" )
 ```
-Now for white grunt: 
+Now repeating the process for white grunt. 
+First, brining in the data and selecting the necessary columns. 
 ```{r}
 dat <- read.csv("./Data/SpatialWG.csv")
 wg <- subset(dat, select=2:21)
 ```
-Model selection
+Model selection:
+Potential variables to be included in the model are as follows: 
+Year, Latitude, Depth, Temperature, Duration, Red Porgy Abundance, red snapper abundance, mean biota density, substrate relief, substrate size, and biota height. 
+
 ```{r}
 library(MuMIn)
 GLM.Names <- function(x,Names,familyabv) {
@@ -158,7 +168,9 @@ bin.ic.AICc <- subset(bin.ic.Frame,AICc.diff<=5)
 bin.ic.AICc <- bin.ic.AICc[with(bin.ic.AICc,order(AICc)),]; bin.ic.AICc
 proc.time()-ptm
 ```
-Best aic and bic models
+Best aic and bic models.
+The BIC model contains 6 variables while the AIC model contains 10 variables. 
+Effects of individual variables on occurence are visualized with visreg. 
 ```{r}
 wgbic <- glm(Presence_absence ~ Year + Lat + Depth + Temp + Red.Porgy.Abund + Mean.BD.kknn, data=wg, family="binomial")
 visreg(wgbic,type="conditional", scale="response", ylab="Probability of Occurrence")

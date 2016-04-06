@@ -4,13 +4,19 @@ author: "Margaret Walker"
 date: "April 3, 2016"
 output: pdf_document
 ---
-k fold cross validation for bsb
+#Cross validation
+
+First for black sea bass.
+Bring in data and define best model based on BIC.  
 ```{r}
 #data and best model
 data <- read.csv("./Data/SpatialBSB.csv")
 bsb <- subset(data, select=2:23)
 bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+```
 
+K fold cross valdidation 
+```{r}
 library(plyr)
 library(caret)
 #false positive rate 
@@ -24,7 +30,6 @@ pbar <- create_progress_bar("text")
 pbar$init(k)
 #accuracy
 acc <- NULL
-#set.seed(123)
 
 
 for(i in 1:k) {
@@ -37,7 +42,8 @@ for(i in 1:k) {
   test <- bsb[-index, ]
   # Fitting
   bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + 
-                  Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn,
+                  Stenotomus.sp.Abund + Red.Snapper.Abund 
+                + Tomtate.Abund + SR.kknn,
                 data=train, family="binomial")
   # Predict results
   results_prob <- predict(bsbbic,subset(test,select=c(3:22)), type='response')
@@ -71,21 +77,26 @@ main='Accuracy CV')
 # Confusion matrix and plots of fpr and fnr
 mean(fpr)
 mean(fnr)
-hist(fpr,xlab='% of fnr',ylab='Freq',main='FPR',
+hist(fpr,xlab='% of fpr',ylab='Freq',main='FPR',
 col='cyan',border='blue',density=30)
 hist(fnr,xlab='% of fnr',ylab='Freq',main='FNR',
 col='cyan',border='blue',density=30)
 
-
+#average accuracy for the model is 82.7 %
+#mean false positive rate is 9.4%
+#mean false negative rate is 7.9%
+#seems pretty good, but our next step will be to look at the event level instead of the trap level and see if this has any effect on model selection or accuracy. 
 
 ```
 Now for white grunt
-
+Bring in data and define best model based on BIC
 ```{r}
 dat <- read.csv("./Data/SpatialWG.csv")
 wg <- subset(dat, select=2:21)
 wgbic <- glm(Presence_absence ~ Year + Lat + Depth + Temp + Red.Porgy.Abund + Mean.BD.kknn, data=wg, family="binomial")
-
+```
+K fold cross validation
+```{r}
 #false positive rate 
 fpr <- NULL
 #false negative rate
@@ -97,35 +108,36 @@ pbar <- create_progress_bar("text")
 pbar$init(k)
 #accuracy
 acc <- NULL
-set.seed(123)
 
 
-for(i in 1:k)
-{
-# Train-test splitting
-# 95% of samples -> fitting
-# 5% of samples -> testing
-smp_size <- floor(0.95 * nrow(wg))
-index <- sample(seq_len(nrow(wg)),size=smp_size)
-train <- wg[index, ]
-test <- wg[-index, ]
-# Fitting
-wgbic <- glm(Presence_absence ~ Year + Lat + Depth + Temp + Red.Porgy.Abund + Mean.BD.kknn, data=train, family="binomial")
-# Predict results
-results_prob <- predict(wgbic,subset(test,select=c(3:20)),type='response')
-# If prob > 0.5 then 1, else 0
-results <- ifelse(results_prob > 0.5,1,0)
-# Actual answers
-answers <- test$Presence_absence
-# Accuracy calculation
-misClasificError <- mean(answers != results)
-# Collecting results
-acc[i] <- 1-misClasificError
-# Confusion matrix
-cm <- confusionMatrix(data=results, reference=answers)
-fpr[i] <- cm$table[2]/(nrow(wg)-smp_size)
-fnr[i] <- cm$table[3]/(nrow(wg)-smp_size)
-pbar$step()
+
+for(i in 1:k) {
+  # Train-test splitting
+  # 95% of samples -> fitting
+  # 5% of samples -> testing
+  smp_size <- floor(0.95 * nrow(wg))
+  index <- sample(seq_len(nrow(wg)),size=smp_size)
+  train <- wg[index, ]
+  test <- wg[-index, ]
+  # Fitting
+  wgbic <- glm(Presence_absence ~ Year + Lat + Depth 
+               + Temp + Red.Porgy.Abund + Mean.BD.kknn
+               , data=train, family="binomial")
+  # Predict results
+  results_prob <- predict(wgbic,subset(test,select=c(3:20)),type='response')
+  # If prob > 0.5 then 1, else 0
+  results <- ifelse(results_prob > 0.5,1,0)
+  # Actual answers
+  answers <- test$Presence_absence
+  # Accuracy calculation
+  misClasificError <- mean(answers != results)
+  # Collecting results
+  acc[i] <- 1-misClasificError
+  # Confusion matrix
+  cm <- confusionMatrix(data=results, reference=answers)
+  fpr[i] <- cm$table[2]/(nrow(wg)-smp_size)
+  fnr[i] <- cm$table[3]/(nrow(wg)-smp_size)
+  pbar$step()
 }
 
 # Average accuracy of the model
@@ -146,5 +158,10 @@ hist(fpr,xlab='% of fnr',ylab='Freq',main='FPR',
 col='cyan',border='blue',density=30)
 hist(fnr,xlab='% of fnr',ylab='Freq',main='FNR',
 col='cyan',border='blue',density=30)
+
+#average accuracy of the model is 88.3%
+#average false positive rate is 3.4%
+#average false negative rage is 8.3%
+#Better than black sea bass, but will still look at a larger grain size than the trap level. 
 ```
 

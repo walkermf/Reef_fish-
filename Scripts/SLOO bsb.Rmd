@@ -9,9 +9,9 @@ library(geoR)
 library(fields)
 ```
 
-SLOO for BSB
+Bringing in BSB data 
 ```{r}
-data <- read.csv(".Data/SpatialBSB.csv")
+data <- read.csv("./Data/SpatialBSB.csv")
 bsb <- subset(data, select=2:23)
 ```
 Best model based on BIC from model selection 
@@ -20,6 +20,7 @@ bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotom
 summary(bsbbic)
 ```
 Determining split distance 
+Examining spatial dependnece at the trap level by plotting the distance of the residuals vs the distance of all the points. 
 ```{r}
 indices = sample(nrow(dat_sub), nrow(dat_sub) / 5)
 dat_sub = data.frame(Lat =bsb$Lat, Long=bsb$Long, 
@@ -33,4 +34,4 @@ plot(d_resid ~ xydist, type='n')
 lines(lowess(xydist, d_resid), lwd=2, col='red')
 
 ```
-appears there is no real spatial autocorrelation at the trap scale.  Will go forward with tradiation cross validation.  
+appears there is no real spatial autocorrelation at the trap scale.  Will go forward with tradiational cross validation. See CrossValidation.rmd  
