@@ -13,6 +13,7 @@ Bring in data and define best model based on BIC.
 data <- read.csv("./Data/SpatialBSB.csv")
 bsb <- subset(data, select=2:23)
 bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+bsbaic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + Scamp.Abund + Mean.BD.kknn + BH.kknn + SS.kknn + SR.kknn, data=bsb, family="binomial" )
 ```
 
 K fold cross valdidation 
@@ -87,6 +88,8 @@ col='cyan',border='blue',density=30)
 #mean false negative rate is 7.9%
 #seems pretty good, but our next step will be to look at the event level instead of the trap level and see if this has any effect on model selection or accuracy. 
 
+
+
 ```
 Now for white grunt
 Bring in data and define best model based on BIC
@@ -154,7 +157,7 @@ main='Accuracy CV')
 # Confusion matrix and plots of fpr and fnr
 mean(fpr)
 mean(fnr)
-hist(fpr,xlab='% of fnr',ylab='Freq',main='FPR',
+hist(fpr,xlab='% of fpr',ylab='Freq',main='FPR',
 col='cyan',border='blue',density=30)
 hist(fnr,xlab='% of fnr',ylab='Freq',main='FNR',
 col='cyan',border='blue',density=30)

@@ -94,6 +94,30 @@ bsbbic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotom
 visreg(bsbbic,type="conditional", scale="response", ylab="Probability of Occurrence")
 bsbaic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + Scamp.Abund + Mean.BD.kknn + BH.kknn + SS.kknn + SR.kknn, data=bsb, family="binomial" )
 ```
+Removing individual variables to examine effects on BIC:
+```{r}
+minus_year <- glm(Presence_absence ~ Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+BIC(minus_year)
+minus_lat <- glm(Presence_absence ~ Year + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+BIC(minus_lat)
+minus_depth <- glm(Presence_absence ~ Year + Lat + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+BIC(minus_depth)
+minus_dur <- glm(Presence_absence ~ Year + Lat + Depth + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+BIC(minus_dur)
+minus_temp <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+BIC(minus_temp)
+minus_steno <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp +  Red.Snapper.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+BIC(minus_steno)
+minus_red <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Tomtate.Abund + SR.kknn, data=bsb, family="binomial")
+BIC(minus_red)
+minus_tom <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + SR.kknn, data=bsb, family="binomial")
+BIC(minus_tom)
+minus_sr <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Stenotomus.sp.Abund + Red.Snapper.Abund + Tomtate.Abund, data=bsb, family="binomial")
+BIC(minus_sr)
+```
+
+
+
 Now repeating the process for white grunt. 
 First, brining in the data and selecting the necessary columns. 
 ```{r}
@@ -173,8 +197,25 @@ The BIC model contains 6 variables while the AIC model contains 10 variables.
 Effects of individual variables on occurence are visualized with visreg. 
 ```{r}
 wgbic <- glm(Presence_absence ~ Year + Lat + Depth + Temp + Red.Porgy.Abund + Mean.BD.kknn, data=wg, family="binomial")
+par(mfcol=c(1,1))
 visreg(wgbic,type="conditional", scale="response", ylab="Probability of Occurrence")
+BIC(wgbic)
 wgaic <- glm(Presence_absence ~ Year + Lat + Depth + Duration + Temp + Red.Porgy.Abund + Red.Snapper.Abund + Mean.BD.kknn + SS.kknn + SR.kknn, data=wg, family="binomial" )
+```
+Removing indiviaul variables and looking at effect on BIC.
+```{r}
+wg_minus_year <- glm(Presence_absence ~ Lat + Depth + Temp + Red.Porgy.Abund + Mean.BD.kknn, data=wg, family="binomial")
+BIC(wg_minus_year)
+wg_minus_lat <- glm(Presence_absence ~ Year + Depth + Temp + Red.Porgy.Abund + Mean.BD.kknn, data=wg, family="binomial")
+BIC(wg_minus_lat)
+wg_minus_depth <- glm(Presence_absence ~ Year + Lat +Temp + Red.Porgy.Abund + Mean.BD.kknn, data=wg, family="binomial")
+BIC(wg_minus_depth)
+wg_minus_temp <- glm(Presence_absence ~ Year + Lat + Depth + Red.Porgy.Abund + Mean.BD.kknn, data=wg, family="binomial")
+BIC(wg_minus_temp)
+wg_minus_rp <- glm(Presence_absence ~ Year + Lat + Depth + Temp +  Mean.BD.kknn, data=wg, family="binomial")
+BIC(wg_minus_rp)
+wg_minus_bd <- glm(Presence_absence ~ Year + Lat + Depth + Temp + Red.Porgy.Abund , data=wg, family="binomial")
+BIC(wg_minus_bd)
 ```
 
 
